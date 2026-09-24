@@ -50,17 +50,17 @@ export PATH="$HOME/.local/bin:$PATH"
 ### 2. The plugin
 
 ```sh
+herdr plugin install jhuaco-govspend/herdr-auggie
+```
+
+The install adds the plugin's hooks to `~/.augment/settings.json`. Existing hooks are kept, and the previous file is saved as `settings.json.bak.herdr-auggie`. The hooks do nothing outside Herdr (they check `HERDR_ENV=1`), so running `auggie` in a normal terminal is unaffected.
+
+To work on the plugin itself, link a local clone instead. `link` does not run the install step, so add the hooks by hand:
+
+```sh
 git clone https://github.com/jhuaco-govspend/herdr-auggie.git ~/herdr-auggie
 herdr plugin link ~/herdr-auggie
 bash ~/herdr-auggie/scripts/install-hooks.sh
-```
-
-`install-hooks.sh` adds the plugin's hooks to `~/.augment/settings.json`. Existing hooks are kept, and the previous file is saved as `settings.json.bak.herdr-auggie`. The hooks do nothing outside Herdr (they check `HERDR_ENV=1`), so running `auggie` in a normal terminal is unaffected.
-
-Once the repo is public it can also be installed straight from GitHub, which runs the hook install automatically:
-
-```sh
-herdr plugin install jhuaco-govspend/herdr-auggie
 ```
 
 ### 3. Shortcuts
@@ -125,16 +125,16 @@ herdr plugin log                         # output and errors from the plugin's s
 jq '.hooks | keys' ~/.augment/settings.json   # should include SessionStart, PromptSubmit, Stop...
 ```
 
-- **No state in the sidebar**: Auggie has to run inside a Herdr pane. Check the hooks with the `jq` command above and reinstall them with `bash ~/herdr-auggie/scripts/install-hooks.sh`.
-- **Hooks keep disappearing**: another tool (a dotfiles setup script, for example) is rewriting `~/.augment/settings.json`. The plugin reinstalls them on every Herdr start; run `install-hooks.sh` to fix it right away.
+- **No state in the sidebar**: Auggie has to run inside a Herdr pane. Check the hooks with the `jq` command above and reinstall them with `herdr plugin action invoke install-hooks --plugin auggie`.
+- **Hooks keep disappearing**: another tool (a dotfiles setup script, for example) is rewriting `~/.augment/settings.json`. The plugin reinstalls them on every Herdr start; run `herdr plugin action invoke install-hooks --plugin auggie` to fix it right away.
 - **A pane doesn't resume**: Auggie only saves a session after the first exchange. Empty sessions restart as a fresh Auggie.
 - **Indexing prompt on every new session**: the plugin always passes `--allow-indexing`. If you launch Auggie by hand in a new directory, accept the prompt once.
 
 ## Uninstall
 
 ```sh
-bash ~/herdr-auggie/scripts/install-hooks.sh --uninstall
-herdr plugin unlink auggie        # or: herdr plugin uninstall auggie, if installed from GitHub
+herdr plugin action invoke uninstall-hooks --plugin auggie
+herdr plugin uninstall auggie     # or: herdr plugin unlink auggie, for a linked clone
 ```
 
 Remove the two `[[keys.command]]` blocks from `~/.config/herdr/config.toml`.
@@ -163,3 +163,7 @@ Herdr only resumes agents that have an official integration, so the hook keeps i
 - Auggie's `Notification` hook exists in its schema but does not fire in 0.36, so the approval dialog is the only "needs input" signal.
 - The session picker does not check whether a conversation is already open in another pane, so the same conversation can end up running in two tabs.
 - Resume depends on Herdr restoring the pane layout. Panes that don't come back get a new workspace in the same directory.
+
+## License
+
+[Apache-2.0](LICENSE), the same license as Herdr.
