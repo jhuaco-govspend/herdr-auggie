@@ -55,7 +55,7 @@ herdr plugin install jhuaco-govspend/herdr-auggie
 
 The install adds the plugin's hooks to `~/.augment/settings.json`. Existing hooks are kept, and the previous file is saved as `settings.json.bak.herdr-auggie`. The hooks do nothing outside Herdr (they check `HERDR_ENV=1`), so running `auggie` in a normal terminal is unaffected.
 
-To work on the plugin itself, link a local clone instead. `link` does not run the install step, so add the hooks by hand:
+To work on the plugin itself, link a local clone instead. `link` does not run the install step, so add the hooks by hand, and run `install-hooks.sh` again after editing anything under `hooks/`:
 
 ```sh
 git clone https://github.com/jhuaco-govspend/herdr-auggie.git ~/herdr-auggie
@@ -141,6 +141,8 @@ Remove the two `[[keys.command]]` blocks from `~/.config/herdr/config.toml`.
 
 ## How it works
 
+`install-hooks.sh` copies the two hook scripts to `~/.local/share/herdr-auggie/hooks/` and registers that copy in `~/.augment/settings.json`, so the path stays valid wherever Herdr keeps the plugin. Every Herdr start refreshes the copy.
+
 `hooks/auggie-herdr-hook.sh` runs on Auggie's `SessionStart`, `PromptSubmit`, `PreToolUse`, `PostToolUse`, `Stop` and `SessionEnd` hooks and reports each state to Herdr with `herdr pane report-agent --source custom:auggie`.
 
 Auggie has no hook that fires while it waits for approval. On `PreToolUse` the hook starts `hooks/approval-watch.sh`, which reads the pane once a second until that tool call finishes and reports `blocked` while the approval dialog is visible.
@@ -152,7 +154,7 @@ Herdr only resumes agents that have an official integration, so the hook keeps i
 | `herdr-plugin.toml` | Plugin manifest: build step, startup commands, actions, session picker popup |
 | `hooks/auggie-herdr-hook.sh` | Translates Auggie hook events into Herdr agent state |
 | `hooks/approval-watch.sh` | Detects the approval dialog while a tool call is pending |
-| `scripts/install-hooks.sh` | Adds or removes the hooks in `~/.augment/settings.json` (idempotent) |
+| `scripts/install-hooks.sh` | Copies the hooks to `~/.local/share/herdr-auggie` and adds or removes them in `~/.augment/settings.json` (idempotent) |
 | `scripts/resume.sh` | Relaunches interrupted conversations |
 | `scripts/new-session.sh` | Opens a tab running Auggie |
 | `scripts/sessions.sh` | Session picker |

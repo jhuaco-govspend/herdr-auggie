@@ -4,12 +4,22 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-hook="$root/hooks/auggie-herdr-hook.sh"
 settings="${AUGMENT_SETTINGS:-$HOME/.augment/settings.json}"
 mode="${1:-install}"
 
+# Herdr builds GitHub installs in a temporary checkout and moves it afterwards,
+# so Auggie gets a stable copy of the hooks instead of a path into the plugin.
+share="${XDG_DATA_HOME:-$HOME/.local/share}/herdr-auggie"
+hook="$share/hooks/auggie-herdr-hook.sh"
+
 command -v jq >/dev/null || { echo "herdr-auggie: jq is required" >&2; exit 1; }
-chmod +x "$hook"
+if [ "$mode" = "--uninstall" ]; then
+  rm -rf "$share/hooks"
+else
+  mkdir -p "$share/hooks"
+  cp "$root/hooks/"*.sh "$share/hooks/"
+  chmod +x "$share/hooks/"*.sh
+fi
 mkdir -p "$(dirname "$settings")"
 [ -s "$settings" ] || echo '{}' > "$settings"
 tmp="$settings.tmp.herdr-auggie"
