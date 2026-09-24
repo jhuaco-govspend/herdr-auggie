@@ -8,10 +8,16 @@ dir="$(state_dir)"
 [ -d "$dir" ] || exit 0
 
 resumed=0
+launched=""
 for f in "$dir"/*.json; do
   [ -e "$f" ] || continue
   pane="$(jq -r .pane "$f")" conv="$(jq -r .conversation "$f")" cwd="$(jq -r .cwd "$f")"
   [ -n "$conv" ] && [ -d "$cwd" ] || { rm -f "$f"; continue; }
+
+  # Never open the same conversation twice: skip it if another pane already
+  # runs it or this loop just relaunched it.
+  case " $launched " in *" $conv "*) rm -f "$f"; continue ;; esac
+  other="$(pane_with_conversation "$conv")" && [ "$other" != "$pane" ] && { rm -f "$f"; continue; }
 
   info="$(h pane get "$pane" 2>/dev/null)"
   if [ -z "$info" ]; then
@@ -28,6 +34,6 @@ for f in "$dir"/*.json; do
   [ -e "${AUGMENT_CACHE_DIR:-$HOME/.augment}/sessions/$conv.json" ] && resume_arg=" --resume $conv"
   [ -n "$resume_arg" ] || rm -f "$f"
   h pane run "$pane" "cd $(printf '%q' "$cwd") && $(auggie_cmd)$resume_arg" >/dev/null \
-    && resumed=$((resumed + 1))
+    && resumed=$((resumed + 1)) && launched="$launched $conv"
 done
 echo "herdr-auggie: resumed $resumed session(s)"

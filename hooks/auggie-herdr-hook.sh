@@ -23,7 +23,10 @@ seq="$(now_ns)"
 # Herdr only resumes official integrations, so keep our own pane -> conversation
 # map for herdr-auggie-resume.
 session="${HERDR_SESSION:-}"
-[ -n "$session" ] || session="$(basename "$(dirname "${HERDR_SOCKET_PATH:-/default/x}")")"
+sock_dir="$(dirname "${HERDR_SOCKET_PATH:-/x}")"
+if [ -z "$session" ]; then
+  [ "$(basename "$(dirname "$sock_dir")")" = sessions ] && session="$(basename "$sock_dir")" || session=default
+fi
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/herdr-auggie/$session"
 state_file="$state_dir/${HERDR_PANE_ID//:/_}.json"
 tool_marker="$state_dir/${HERDR_PANE_ID//:/_}.tool"

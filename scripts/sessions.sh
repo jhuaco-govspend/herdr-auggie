@@ -29,4 +29,9 @@ else
 fi
 [ -n "${pick:-}" ] || exit 0
 
+if open="$(pane_with_conversation "$pick")"; then
+  h agent focus "$open" >/dev/null
+  exit 0
+fi
+
 "$(dirname "$0")/new-session.sh" "$cwd" "$pick"
