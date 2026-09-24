@@ -1,0 +1,47 @@
+id = "auggie"
+name = "Auggie"
+version = "0.1.0"
+min_herdr_version = "0.9.0"
+description = "Auggie (Augment CLI) integration: live agent state, approval detection, session resume after restart, session picker"
+platforms = ["linux", "macos"]
+
+[[build]]
+command = ["bash", "scripts/install-hooks.sh"]
+
+[[startup]]
+command = ["bash", "scripts/install-hooks.sh"]
+
+[[startup]]
+command = ["bash", "scripts/resume.sh"]
+
+[[actions]]
+id = "new"
+title = "Auggie: new session"
+contexts = ["workspace"]
+command = ["bash", "scripts/new-session.sh"]
+
+[[actions]]
+id = "resume-all"
+title = "Auggie: resume interrupted sessions"
+contexts = ["workspace"]
+command = ["bash", "scripts/resume.sh"]
+
+[[actions]]
+id = "install-hooks"
+title = "Auggie: install hooks in ~/.augment/settings.json"
+contexts = ["workspace"]
+command = ["bash", "scripts/install-hooks.sh"]
+
+[[actions]]
+id = "uninstall-hooks"
+title = "Auggie: remove hooks from ~/.augment/settings.json"
+contexts = ["workspace"]
+command = ["bash", "scripts/install-hooks.sh", "--uninstall"]
+
+[[panes]]
+id = "sessions"
+title = "Auggie sessions"
+placement = "popup"
+width = 110
+height = 24
+command = ["bash", "scripts/sessions.sh"]
