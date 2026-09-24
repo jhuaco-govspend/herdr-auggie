@@ -9,6 +9,7 @@ Herdr is a terminal multiplexer for coding agents: panes, tabs, mouse support, a
 | Feature | What you get |
 | --- | --- |
 | Live state | Each Auggie pane shows up in the sidebar as `working` (thinking or running a tool), `idle` (your turn) or `blocked` (waiting for a tool approval) |
+| Session name | The sidebar shows `auggie · <session name>`, using the name Auggie generates after the first exchange (or the one you set when renaming the session). Also available as the `$session` token for custom sidebar rows |
 | Approval detection | The pane switches to `blocked` within a second or two of Auggie showing "Tool Approval Required", and back to `working` once you answer |
 | Resume after restart | When the Herdr server restarts (reboot, crash, `herdr server stop`), every pane that was running Auggie reopens its conversation with the full history |
 | New session | One shortcut opens a new tab running Auggie in the current directory |
@@ -110,6 +111,17 @@ herdr plugin action invoke uninstall-hooks --plugin auggie
 
 Extra Auggie flags for new and resumed sessions go in `AUGGIE_HERDR_ARGS`, for example `export AUGGIE_HERDR_ARGS="--model sonnet5-high"`.
 
+### Sidebar layout
+
+By default Herdr shows `workspace · tab` on the first line and the agent label on the second, which the plugin turns into `auggie · <session name>`. For a new session the name shows up a few seconds after the first answer, once Auggie has generated it.
+
+To lay the rows out differently, use the `$session` token in `~/.config/herdr/config.toml`:
+
+```toml
+[ui.sidebar.agents.rows_by_agent]
+auggie = [["state_icon", "workspace", "tab"], ["$session"]]
+```
+
 ## Check that it works
 
 1. **State.** Press `ctrl+b`, `a`. A tab opens with Auggie and the sidebar shows `auggie` as `idle`. Ask it something; it shows `working` while it runs and `idle` when it's done.
@@ -128,6 +140,7 @@ jq '.hooks | keys' ~/.augment/settings.json   # should include SessionStart, Pro
 - **No state in the sidebar**: Auggie has to run inside a Herdr pane. Check the hooks with the `jq` command above and reinstall them with `herdr plugin action invoke install-hooks --plugin auggie`.
 - **Hooks keep disappearing**: another tool (a dotfiles setup script, for example) is rewriting `~/.augment/settings.json`. The plugin reinstalls them on every Herdr start; run `herdr plugin action invoke install-hooks --plugin auggie` to fix it right away.
 - **A pane doesn't resume**: Auggie only saves a session after the first exchange. Empty sessions restart as a fresh Auggie.
+- **Debug log**: start Auggie with `HERDR_AUGGIE_DEBUG=1 auggie` and every hook event is appended to `~/.local/state/herdr-auggie/<session>/debug.log`.
 - **Indexing prompt on every new session**: the plugin always passes `--allow-indexing`. If you launch Auggie by hand in a new directory, accept the prompt once.
 
 ## Uninstall

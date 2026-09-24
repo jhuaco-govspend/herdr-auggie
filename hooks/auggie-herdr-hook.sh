@@ -36,10 +36,23 @@ remember() {
     --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{pane:$pane, conversation:$conv, cwd:$cwd, at:$at}' \
     > "$state_file.tmp" && mv "$state_file.tmp" "$state_file"
 }
+[ "${HERDR_AUGGIE_DEBUG:-}" = 1 ] && mkdir -p "$state_dir" \
+  && echo "$(date -u +%H:%M:%S) pane=$HERDR_PANE_ID event=$event conv=${conv:-none}" >> "$state_dir/debug.log"
+
 report() {
   "$herdr" pane report-agent "$HERDR_PANE_ID" --source "$source_id" --agent auggie \
     --seq "$seq" --state "$1" ${conv:+--agent-session-id "$conv"} ${2:+--message "$2"} \
     >/dev/null 2>&1
+}
+# Shows the session name (auto-generated after the first exchange, or set with
+# a rename) in the sidebar, and exposes it as the $session row token.
+publish_name() {
+  local file="${AUGMENT_CACHE_DIR:-$HOME/.augment}/sessions/$conv.json" name
+  [ -n "$conv" ] && [ -e "$file" ] || return 1
+  name="$(jq -r '.customTitle // empty' "$file" 2>/dev/null)"
+  [ -n "$name" ] || return 1
+  "$herdr" pane report-metadata "$HERDR_PANE_ID" --source "$source_id" --agent auggie --seq "$(now_ns)" \
+    --display-agent "auggie · $name" --title "$name" --token "session=$name" >/dev/null 2>&1
 }
 
 case "$event" in
@@ -48,11 +61,13 @@ case "$event" in
     [ -n "$conv" ] && "$herdr" pane report-agent-session "$HERDR_PANE_ID" \
       --source "$source_id" --agent auggie --seq "$seq" --agent-session-id "$conv" >/dev/null 2>&1
     report idle
+    publish_name || true
     ;;
   PromptSubmit|PostToolUse)
     [ -n "$conv" ] && [ ! -e "$state_file" ] && remember
     rm -f "$tool_marker"
     report working
+    [ "$event" = PromptSubmit ] && { publish_name || true; }
     ;;
   PreToolUse)
     [ -n "$conv" ] && [ ! -e "$state_file" ] && remember
@@ -66,10 +81,15 @@ case "$event" in
     rm -f "$tool_marker"
     cause="$(printf '%s' "$payload" | jq -r '.agent_stop_cause // empty' 2>/dev/null)"
     report idle "${cause:-}"
+    # Auggie writes the generated title right after Stop on the first turn.
+    publish_name || ( for _ in 1 2 3 4 5; do sleep 2; publish_name && exit 0; done ) \
+      </dev/null >/dev/null 2>&1 &
     ;;
   SessionEnd)
     rm -f "$state_file" "$tool_marker"
-    "$herdr" pane release-agent "$HERDR_PANE_ID" --source "$source_id" --agent auggie >/dev/null 2>&1
+    "$herdr" pane report-metadata "$HERDR_PANE_ID" --source "$source_id" --agent auggie --seq "$seq" \
+      --clear-display-agent --clear-title --clear-token session >/dev/null 2>&1
+    "$herdr" pane release-agent "$HERDR_PANE_ID" --source "$source_id" --agent auggie --seq "$seq" >/dev/null 2>&1
     ;;
 esac
 exit 0
